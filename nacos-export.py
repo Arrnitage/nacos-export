@@ -1,6 +1,11 @@
 import requests
 import sys
 
+
+proxy = {
+    # "http": "127.0.0.1:8080"
+}
+
 def get_auth_token(target: str, username: str, password: str) -> str:
     token = ""
     path = "/v1/auth/users/login"
@@ -21,7 +26,7 @@ def get_auth_token(target: str, username: str, password: str) -> str:
         'username': username,
         'password': password,
     }
-    resp = requests.post(url, headers=headers, data=data)
+    resp = requests.post(url, headers=headers, data=data, proxies=proxy)
     resp_dict = resp.json()
     token = resp_dict.get("accessToken")
     return token
@@ -49,7 +54,7 @@ def get_namespaces(target: str, token: str) -> list:
         'accessToken': token,
         'namespaceId': '',
     }
-    resp = requests.get(url, headers=headers, params=params)
+    resp = requests.get(url, headers=headers, params=params, proxies=proxy)
     resp_dict = resp.json()
     namespace_id = [item['namespace'] for item in resp_dict['data']]
     return namespace_id
@@ -83,9 +88,10 @@ def dump_config_content(target: str, namespaces: list, token: str, count: int = 
             'search': 'accurate',
             'accessToken': token,
         }
-        resp = requests.get(url, headers=headers, params=params)
+        resp = requests.get(url, headers=headers, params=params, proxies=proxy)
         resp_dict = resp.json()
         for item in resp_dict['pageItems']:
+            print("[+] NAMESPACE: {namespace}\n[+] CONFIG: {dataid}".format(dataid=item["dataId"], namespace=item["group"]))
             print(item['content'])
 
 
