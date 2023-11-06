@@ -109,8 +109,11 @@ def usage(name: str):
 
 Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD> [COUNT]
+    python3 {script} <URL> <USERNAME> <PASSWORD> [COUNT]
 
-    URL: like this https://127.0.0.1/some_path/, split at /v1
+    Example:
+        python3 {script} http://localhost:8848/nacos nacos nacos
+        python3 {script} http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
     COUNT: is optional, set max number.
     """.format(script=name))
 
@@ -121,9 +124,11 @@ if __name__ == '__main__':
         exit()
 
     target = sys.argv[1].rstrip('/')
-    username = sys.argv[2]
-    password = sys.argv[3]
-
-    token = get_auth_token(target, username, password)
+    token = ""
+    if len(sys.argv) == 3:
+        token = get_auth_token(target, sys.argv[2], sys.argv[3])
+    if len(sys.argv) == 2:
+        token = sys.argv[2]
+    
     namespaces = get_namespaces(target, token)
     dump_config_content(target, namespaces, token)
