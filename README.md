@@ -17,12 +17,12 @@ $ python3 nacos-export.py
                 ||     ||
 
 Usage:
-    python3 nacos-export.py <URL> <USERNAME> <PASSWORD> [COUNT]
+    python3 {script} <URL> <USERNAME> <PASSWORD>
+    python3 {script} <URL> <TOKEN>
 
-    URL: like this https://127.0.0.1/some_path/, split at /v1
-    COUNT: is optional, set max number.
-
-
-python3 nacos-export.py http://127.0.0.1 nacos nacos
+Example:
+    python3 {script} http://localhost:8848/nacos nacos nacos
+    python3 {script} http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
+    
 ```
 
