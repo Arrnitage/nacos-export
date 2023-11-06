@@ -84,13 +84,12 @@ def usage(name: str):
                 ||     ||
 
 Usage:
-    python3 {script} <URL> <USERNAME> <PASSWORD> [COUNT]
-    python3 {script} <URL> <USERNAME> <PASSWORD> [COUNT]
+    python3 {script} <URL> <USERNAME> <PASSWORD>
+    python3 {script} <URL> <TOKEN>
 
-    Example:
-        python3 {script} http://localhost:8848/nacos nacos nacos
-        python3 {script} http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
-    COUNT: is optional, set max number.
+Example:
+    python3 {script} http://localhost:8848/nacos nacos nacos
+    python3 {script} http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
     """.format(script=name))
 
 
