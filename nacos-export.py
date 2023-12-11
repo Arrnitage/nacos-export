@@ -95,7 +95,7 @@ def usage(name: str):
 Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD>
     python3 {script} <URL> <TOKEN>
-    python3 {script} <URL> authbypass
+    python3 {script} <URL> nacos-auth-bypass
 
 Example:
     python3 {script} http://localhost:8848/nacos nacos nacos
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 4:
         token = get_auth_token(target, sys.argv[2], sys.argv[3])
     if len(sys.argv) == 3:
-        if sys.argv[2] != "authbypass":
+        if sys.argv[2] != "nacos-auth-bypass":
             token = sys.argv[2]
         else:
             # header = { "serverIdentity": "security"}
