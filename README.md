@@ -1,6 +1,8 @@
 # NACOS EXPORT
 
-通过账号密码进行nacos配置内容导出。
+- ✅ 通过nacos账号密码导出配置
+- ✅ 通过token导出配置
+- ✅ 通过nacos-auth-bypass导出配置
 
 ## Use
 
@@ -13,16 +15,17 @@ $ python3 nacos-export.py
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
-                ||----w |         
+                ||----w |
                 ||     ||
 
 Usage:
-    python3 {script} <URL> <USERNAME> <PASSWORD>
-    python3 {script} <URL> <TOKEN>
+    python3 nacos-export.py <URL> <USERNAME> <PASSWORD>
+    python3 nacos-export.py <URL> <TOKEN>
+    python3 nacos-export.py <URL> nacos-auth-bypass
 
 Example:
-    python3 {script} http://localhost:8848/nacos nacos nacos
-    python3 {script} http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
+    python3 nacos-export.py http://localhost:8848/nacos nacos nacos
+    python3 nacos-export.py http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
     
 ```
 
