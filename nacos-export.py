@@ -99,7 +99,13 @@ def dump_config_content(target: str, namespaces: list, token: str, bypass: bool,
         resp = requests.get(url, headers=headers, params=params, proxies=proxy)
         resp_dict = resp.json()
         for item in resp_dict['pageItems']:
-            print("[+] NAMESPACE: {namespace}\n[+] CONFIG: {dataid}".format(dataid=item["dataId"], namespace=item["group"]))
+            print("""
+##################################################
+[+] NAMESPACE: {namespace}
+[+] CONFIG: {dataid}
+##################################################
+
+""".format(dataid=item["dataId"], namespace=item["group"]))
             print(item['content'])
             content_list.append(item['content'])
     return content_list
