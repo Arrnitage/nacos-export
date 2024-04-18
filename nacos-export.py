@@ -140,7 +140,7 @@ def dump_sql(target):
         
 
 def usage(name: str):
-    ver = "v1.1.0"
+    ver = "v1.1.1"
     print("""
  ______________
 < Nacos Export >         @Author: Arm!tage
@@ -158,10 +158,10 @@ Usage:
     python3 {script} <URL> sql
 
 Example:
-    python3 {script} http://localhost:8848/nacos nacos nacos
-    python3 {script} http://localhost:8848/nacos eyJhbGciOiJIXXXXXXXXXXXX
-    python3 {script} http://localhost:8848/nacos unauth
-    python3 {script} http://localhost:8848/nacos sql
+    python3 {script} http://TARGET:8848/nacos nacos nacos
+    python3 {script} http://TARGET:8848/nacos eyJhbGciOiJIXXXXXXXXXXXX
+    python3 {script} http://TARGET:8848/nacos unauth
+    python3 {script} http://TARGET:8848/nacos sql
 """.format(script=name, version=ver))
 
 
