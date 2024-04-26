@@ -9,7 +9,7 @@
 
 ## Use
 
-考虑到NACOS部署方式不同，在设置目标路径时，指向`/v1`的上一级目录.
+考虑到NACOS部署方式不同，在设置目标路径时，指向 `/v1`的上一级目录.
 
 > 若要将将结果保存至文件，请通过重定向输出方式
 
@@ -18,7 +18,7 @@ $ python3 nacos-export.py
 
  ______________
 < Nacos Export >         @Author: Arm!tage
- --------------          @Version: v1.2.0
+ --------------          @Version: v1.2.1
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
@@ -27,7 +27,7 @@ $ python3 nacos-export.py
 
 Usage:
     python3 nacos-export.py <URL> <USERNAME> <PASSWORD>
-    python3 nacos-export.py <URL> secertkey <SECRETKEY>
+    python3 nacos-export.py <URL> secretkey <SECRETKEY>
     python3 nacos-export.py <URL> <TOKEN>
     python3 nacos-export.py <URL> bypass|unauth
     python3 nacos-export.py <URL> sql

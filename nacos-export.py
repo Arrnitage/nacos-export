@@ -158,7 +158,7 @@ def gen_token(target: str, secretkey: str) -> str:
 
 
 def usage(name: str):
-    ver = "v1.2.0"
+    ver = "v1.2.1"
     print("""
  ______________
 < Nacos Export >         @Author: Arm!tage
@@ -171,7 +171,7 @@ def usage(name: str):
 
 Usage:
     python3 {script} <URL> <USERNAME> <PASSWORD>
-    python3 {script} <URL> secertkey <SECRETKEY>
+    python3 {script} <URL> secretkey <SECRETKEY>
     python3 {script} <URL> <TOKEN>
     python3 {script} <URL> bypass|unauth
     python3 {script} <URL> sql
