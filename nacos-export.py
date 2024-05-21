@@ -42,7 +42,7 @@ def login(target: str, username: str, password: str) -> str:
         print("[!] login failed.")
         exit(0)
     else:
-        print("[+] Tokne: {}".format(token))
+        print("[+] Token: {}".format(token))
         return token
 
 def get_namespaces(target: str, token: str) -> list:
