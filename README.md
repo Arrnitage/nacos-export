@@ -1,5 +1,7 @@
 # NACOS EXPORT
 
+## Feature
+
 - ✅ 通过nacos账号密码导出配置
 - ✅ 通过secretkey导出配置
 - ✅ 通过token导出配置
@@ -11,7 +13,7 @@
 
 考虑到NACOS部署方式不同，在设置目标路径时，指向 `/v1`的上一级目录.
 
-> 若要将将结果保存至文件，请通过重定向输出方式
+> 若要将结果保存至文件，请通过重定向输出方式
 
 ```text
 $ python3 nacos-export.py
