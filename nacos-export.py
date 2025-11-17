@@ -135,7 +135,7 @@ class NacosExport:
         if self.verified:
             self.header["Accesstoken"] = self.token
             print_info(f"Set HTTP header (Accesstoken: {self.token})", self.colored)
-            self.header["Authorziation"] = self.token
+            self.header["Authorization"] = self.token
             print_info(f"Set HTTP header (Authorization: {self.token})", self.colored)
         else:
             self.header['serverIdentity'] = "security"

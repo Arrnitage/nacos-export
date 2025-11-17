@@ -1,0 +1,16 @@
+# Ignore All
+*.*
+.venv/**
+
+# git
+!.gitignore
+
+# uv 
+!.python-version
+!pyproject.toml
+uv.lock
+
+# project
+!nacos-export.py
+!README.md
+!requirements.txt
