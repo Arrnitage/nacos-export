@@ -8,7 +8,7 @@
 # uv 
 !.python-version
 !pyproject.toml
-uv.lock
+!uv.lock
 
 # project
 !nacos-export.py
